@@ -24,6 +24,7 @@ type sayHelloNotify struct {
 	m       sync.Mutex
 }
 
+// 启动消息发生器
 func (self *sayHelloNotify) init() {
 	self.msgChan = make(map[string]chan string)
 	self.list = make(map[string]*timestamp.Timestamp)
@@ -51,6 +52,7 @@ func (self *sayHelloNotify) init() {
 	}()
 }
 
+// LastNotify 是一元调用模式
 func (self *sayHelloNotify) LastNotify(context.Context, *TryRequest) (*NotifyMes, error) {
 	if self.last == nil {
 		return nil, fmt.Errorf("message is nil")
@@ -58,6 +60,7 @@ func (self *sayHelloNotify) LastNotify(context.Context, *TryRequest) (*NotifyMes
 	return self.last, nil
 }
 
+// Notify 是双向流模式
 func (s *sayHelloNotify) Notify(r *TryRequest, stream TryService_NotifyServer) error {
 	c := make(chan string)
 	u := uuid.New()
@@ -78,18 +81,22 @@ func (s *sayHelloNotify) Notify(r *TryRequest, stream TryService_NotifyServer) e
 	timeout := time.Tick(time.Hour)
 	for {
 		select {
+		// 超时返回,服务端会自动断开流
 		case <-timeout:
 			return fmt.Errorf("超时")
+			// ctx被取消(流断开)
 		case <-stream.Context().Done():
 			log.Printf("client down(%s):%v", key, stream.Context().Err())
 			return fmt.Errorf("client down error")
 		case m := <-c:
 			hello := "hello " + r.GetId() + "." + m
-			ip, portStr, _ := getClietIP(stream.Context())
+			ip, portStr, _ := getClientIP(stream.Context())
 			port, _ := strconv.Atoi(portStr)
+			// 序列化Any
 			any, _ := ptypes.MarshalAny(&Address{IP: ip, Port: int32(port)})
 			msg := NotifyMes{Content: hello, UserList: s.list, Details: any}
 			s.last = &msg
+			// 发送消息
 			err := stream.Send(&msg)
 			if err != nil {
 				log.Printf(err.Error())
@@ -98,7 +105,10 @@ func (s *sayHelloNotify) Notify(r *TryRequest, stream TryService_NotifyServer) e
 	}
 	return nil
 }
-func getClietIP(ctx context.Context) (ip, port string, err error) {
+
+// getClientIP 通过节点信息获取地址
+func getClientIP(ctx context.Context) (ip, port string, err error) {
+	// 获取节点信息
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
 		err = fmt.Errorf("[getClinetIP] invoke FromContext() failed")
@@ -108,6 +118,7 @@ func getClietIP(ctx context.Context) (ip, port string, err error) {
 		err = fmt.Errorf("[getClientIP] peer.Addr is nil")
 		return
 	}
+	// 地址格式为 ip:port
 	addSlice := strings.Split(pr.Addr.String(), ":")
 	ip = addSlice[0]
 	port = addSlice[1]

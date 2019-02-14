@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"html"
 	"log"
 	"net"
 )
@@ -28,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	// 新建grpc服务,并传入拦截器进行认证检查
 	grpcServer := grpc.NewServer(
 		grpc.StreamInterceptor(go_grpc_middleware.ChainStreamServer(
 			grpc_auth.StreamServerInterceptor(auth),
@@ -39,10 +39,12 @@ func main() {
 	shn := &sayHelloNotify{}
 	shn.last = &pb.NotifyMes{}
 	shn.init()
+	// 注册grpc实例
 	pb.RegisterTryServiceServer(grpcServer, shn)
 	log.Printf("server start")
 
-	// 浏览器访问URL /TryService/Notify 和 /TryService/LastNotify
+	// 使用http进行rpc调试.浏览器访问URL http://127.0.0.1:1234/TryService/Notify 调试双向流
+	// http://127.0.0.1:1234/TryService/Notify/TryService/LastNotify 调试一元调用
 	go func() {
 		var opts []grpc.DialOption
 		opts = append(opts, grpc.WithInsecure())
@@ -52,13 +54,7 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-var golangStructHtmlStringer = func(req, resp interface{}) ([]byte, error) {
-	header := []byte("<p><div class=\"container\"><pre>")
-	data := []byte(html.EscapeString(fmt.Sprintf("%+v", resp)))
-	footer := []byte("</pre></div></p>")
-	return append(append(header, data...), footer...), nil
-}
-
+// auth 对传入的metadata中的:authority内容进行判断,失败后再对token进行判断
 func auth(ctx context.Context) (ctx1 context.Context, err error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
