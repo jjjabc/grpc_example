@@ -75,8 +75,11 @@ func (s *sayHelloNotify) Notify(r *TryRequest, stream TryService_NotifyServer) e
 		}
 		s.m.Unlock()
 	}()
+	timeout := time.Tick(time.Hour)
 	for {
 		select {
+		case <-timeout:
+			return fmt.Errorf("超时")
 		case <-stream.Context().Done():
 			log.Printf("client down(%s):%v", key, stream.Context().Err())
 			return fmt.Errorf("client down error")

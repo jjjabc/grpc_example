@@ -8,11 +8,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"log"
+	"time"
 )
 
 const (
 	currentToken = "aaa"
 	wrongToken   = "aaa1"
+	authority    = "aaaa"
 )
 
 type Auth struct {
@@ -31,7 +33,7 @@ func (a *Auth) RequireTransportSecurity() bool {
 func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
-	//opts = append(opts, grpc.WithAuthority("aaaa"))
+	opts = append(opts, grpc.WithAuthority(authority))
 	//opts = append(opts, grpc.WithPerRPCCredentials(&auth))
 	target := flag.String("t", "127.0.0.1:1234", "server address(ip:port)")
 	conn, err := grpc.Dial(*target, opts...)
@@ -43,16 +45,23 @@ func main() {
 	authStreamMd := metadata.Pairs("token", currentToken)
 	authUnaryMd := metadata.Pairs("token", wrongToken)
 
-	ctx := metadata.NewOutgoingContext(context.Background(), authStreamMd)
+	cancelCtx, cancelFunc := context.WithCancel(context.Background())
+	ctx := metadata.NewOutgoingContext(cancelCtx, authStreamMd)
 	nc, err := client.Notify(ctx, &pb.TryRequest{Id: "xunj"})
 	if err != nil {
 		log.Fatal(err)
 	}
+	timeout := time.NewTimer(time.Hour).C
+	go func() {
+		<-timeout
+		cancelFunc()
+	}()
 	go func() {
 		for {
 			msg, err := nc.Recv()
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				return
 			}
 			addr := pb.Address{}
 			err = ptypes.UnmarshalAny(msg.Details, &addr)
