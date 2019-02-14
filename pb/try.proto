@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package pb;
+option optimize_for = CODE_SIZE;
+import "google/api/annotations.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+service TryService {
+    rpc Notify (TryRequest) returns (stream NotifyMes) {
+        option (google.api.http) = {
+        post: "/v1/example/notify"
+        body: "*"
+        };
+    };
+    rpc LastNotify (TryRequest) returns (NotifyMes) {
+        option (google.api.http) = {
+        post: "/v1/example/last_notify"
+        body: "*"
+        };
+    };
+}
+
+message TryRequest {
+    string id = 1;
+}
+
+message NotifyMes {
+    string Content = 1;
+    google.protobuf.Any Details = 2;
+    map<string, google.protobuf.Timestamp> UserList = 3;
+}
+
+message Address {
+    string IP = 1;
+    int32 Port = 2;
+}
