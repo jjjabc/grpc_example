@@ -43,8 +43,8 @@ func main() {
 	pb.RegisterTryServiceServer(grpcServer, shn)
 	log.Printf("server start")
 
-	// 使用http进行rpc调试.浏览器访问URL http://127.0.0.1:1234/TryService/Notify 调试双向流
-	// http://127.0.0.1:1234/TryService/Notify/TryService/LastNotify 调试一元调用
+	// 使用http进行rpc调试.浏览器访问URL http://127.0.0.1:8080/TryService/Notify 调试双向流
+	// http://127.0.0.1:8080/TryService/Notify/TryService/LastNotify 调试一元调用
 	go func() {
 		var opts []grpc.DialOption
 		opts = append(opts, grpc.WithInsecure())

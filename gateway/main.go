@@ -33,8 +33,8 @@ func run() error {
 	mux:=http.NewServeMux()
 	mux.Handle("/",gwmux)
 	mux.Handle("/swagger/", http.FileServer(http.Dir(".")))
-	log.Printf("Listen :8080")
-	return http.ListenAndServe(":8080", mux)
+	log.Printf("Listen :8888")
+	return http.ListenAndServe(":8888", mux)
 }
 
 func main() {

@@ -21,7 +21,11 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	// WithAuthority会将传入值设置到请求头的:authority字段中,服务端可以检查此字段(如果未用安全套接字,此字段将以明文进行传输)
-	opts = append(opts, grpc.WithAuthority(authority))
+	opts = append(opts,
+		grpc.WithAuthority(authority),
+		grpc.WithStreamInterceptor(StreamClientInterceptor),
+		grpc.WithUnaryInterceptor(UnaryClientInterceptor),
+	)
 	//opts = append(opts, grpc.WithPerRPCCredentials(&auth))
 	target := flag.String("t", "127.0.0.1:1234", "server address(ip:port)")
 	conn, err := grpc.Dial(*target, opts...)
@@ -73,3 +77,4 @@ func main() {
 	log.Println("Last:" + last.Content)
 	<-make(chan bool)
 }
+
